@@ -101,7 +101,7 @@ let install_section name files =
 ;;
 
 let _ =
-  Arg.parse arg_list (fun s -> files := s::!files) "Usage: opalin [arguments] <install-file>";
+  Arg.parse arg_list (fun s -> files := s::!files) "Usage: opaline [arguments] <install-file>";
   files := List.rev !files;
   if !pkg_name = "" then
     raise No_package_name;
