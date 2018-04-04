@@ -34,7 +34,9 @@ let arg_list =
     "-etcdir", Arg.String (fun s -> etcdir := s), "Directory to install files from the etc section";
     "-docdir", Arg.String (fun s -> docdir := s), "Directory to install files from the doc section";
     "-stublibsdir", Arg.String (fun s -> stublibsdir := s), "Directory to install files from the stublibs section";
-    "-mandir", Arg.String (fun s -> mandir := s), "Directory to install files from the man section"
+    "-mandir", Arg.String (fun s -> mandir := s), "Directory to install files from the man section";
+    "-install-cmd", Arg.String (fun s -> install_cmd := s), "Install command";
+    "-exec-install-cmd", Arg.String (fun s -> exec_install_cmd := s), "Install command";
   ]
 ;; 
 
