@@ -38,10 +38,12 @@ let arg_list =
   ]
 ;; 
 
-let rec filename_concat l =
-  match l with
-  | [] -> ""
-  | h::t -> Filename.concat h (filename_concat t)
+let filename_concat l =
+  let rec fc_aux res = function
+          | [] -> res
+          | h::t -> fc_aux (Filename.concat res h) t
+  in
+    fc_aux "" l
 ;;
 
 let install_file ?(exec=false) ?(man=false) dir src dst =
