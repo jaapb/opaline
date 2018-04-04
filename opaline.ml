@@ -42,8 +42,8 @@ let arg_list =
 
 let filename_concat l =
   let rec fc_aux res = function
-          | [] -> res
-          | h::t -> fc_aux (Filename.concat res h) t
+  | [] -> res
+  | h::t -> fc_aux (Filename.concat res h) t
   in
     fc_aux "" l
 ;;
@@ -51,9 +51,10 @@ let filename_concat l =
 let install_file ?(exec=false) ?(man=false) dir src dst =
   let path =
     match dst with
-    | None -> Filename.concat !destdir dir
+    | None -> filename_concat [!destdir; dir; Filename.basename src]
     | Some d -> filename_concat [!destdir; dir; d]
   in
+  Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path));
   if exec then
     ignore (Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path))
   else
