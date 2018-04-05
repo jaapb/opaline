@@ -51,7 +51,13 @@ let filename_concat l =
 let install_file ?(exec=false) ?(man=false) dir src dst =
   let path =
     match dst with
-    | None -> filename_concat [!destdir; dir; Filename.basename src]
+    | None ->
+        let fname = Filename.basename src in
+          if man then
+            let ext = Filename.extension fname in
+            filename_concat [!destdir; dir; Printf.sprintf "man%s" (String.sub ext 1 (String.length ext - 1)); fname]
+          else
+            filename_concat [!destdir; dir; fname]
     | Some d -> filename_concat [!destdir; dir; d]
   in
   Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path));
