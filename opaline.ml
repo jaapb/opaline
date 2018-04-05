@@ -81,7 +81,7 @@ let do_install ~section ~src ?dst () =
   else if section = "doc" then
     install_file !docdir src dst
   else if section = "stublibs" then
-    install_file !stublibsdir src dst
+    install_file ~exec:true !stublibsdir src dst
   else if section = "man" then
     install_file ~man:true !mandir src dst
   else if section = "misc" then
