@@ -1,6 +1,8 @@
 OPTNESS?=	native
 PREFIX?=	/usr/local
 
+all: opaline
+
 opaline: opaline.${OPTNESS}
 	cp opaline.${OPTNESS} opaline
 
