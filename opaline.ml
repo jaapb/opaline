@@ -2,6 +2,8 @@ open OpamParserTypes
 
 exception No_install_file
 exception No_package_name
+exception File_nonexistent of string
+exception Install_error of int * string
 
 let files = ref [];;
 let pkg_name = ref "";;
@@ -49,6 +51,11 @@ let filename_concat l =
 ;;
 
 let install_file ?(exec=false) ?(man=false) dir src dst =
+	let (src, optional) =
+		if src.[0] = '?' then
+			(String.sub src 1 (String.length src - 1), true)
+		else
+			(src, false) in
   let path =
     match dst with
     | None ->
@@ -60,11 +67,19 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
             filename_concat [!destdir; dir; fname]
     | Some d -> filename_concat [!destdir; dir; d]
   in
-  Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path));
-  if exec then
-    ignore (Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path))
+  ignore (Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path)));
+	(try
+		Unix.access src [R_OK; F_OK]
+	with
+		Unix.Unix_error _ -> raise (File_nonexistent src));
+  let ret = if exec then
+   	 Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path)
   else
-    ignore (Sys.command (Printf.sprintf "%s %s %s" !install_cmd src path))
+   	 Sys.command (Printf.sprintf "%s %s %s" !install_cmd src path) in
+	if ret = 0 then
+		()
+	else
+		raise (Install_error (ret, src))
 ;;
 
 let do_install ~section ~src ?dst () =

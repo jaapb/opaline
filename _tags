@@ -1,3 +1,3 @@
-<opaline.ml>: package(opam-file-format)
-<opaline.byte>: package(opam-file-format)
-<opaline.native>: package(opam-file-format)
+<opaline.ml>: package(unix,opam-file-format)
+<opaline.byte>: package(unix,opam-file-format)
+<opaline.native>: package(unix,opam-file-format)
