@@ -46,6 +46,11 @@ let arg_list =
 let filename_concat =
   List.fold_left Filename.concat ""
 
+let check_file_exists ~optional src : bool =
+  match Unix.(access src [R_OK; F_OK]) with
+  | () -> true
+  | exception Unix.Unix_error _ -> if optional then false else raise (File_nonexistent src)
+
 let install_file ?(exec=false) ?(man=false) dir src dst =
 	let (src, optional) =
 		if src.[0] = '?' then
@@ -63,11 +68,8 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
             filename_concat [!destdir; dir; fname]
     | Some d -> filename_concat [!destdir; dir; d]
   in
+  if check_file_exists ~optional src then begin
   ignore (Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path)));
-	(try
-		Unix.access src [R_OK; F_OK]
-	with
-		Unix.Unix_error _ -> raise (File_nonexistent src));
   let ret = if exec then
    	 Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path)
   else
@@ -76,7 +78,7 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
 		()
 	else
 		raise (Install_error (ret, src))
-;;
+  end
 
 type param = {
   name : string;
