@@ -146,9 +146,17 @@ let get_param prefix name : param =
     mandir = d !mandir [ prefix ; "man" ];
   }
 
+(* List of *.install files in current directory *)
+let all_install_files () : string list =
+  () |> Sys.getcwd |> Sys.readdir |> Array.to_list |> List.filter
+  (fun n -> Filename.extension n = ".install")
+
 let _ =
   Arg.parse arg_list (fun s -> files := s::!files) "Usage: opaline [arguments] <install-file>";
-  files := List.rev !files;
+  let files =
+    if !files <> [] then List.rev !files
+    else all_install_files ()
+  in
   List.iter (fun f ->
     let name = if !pkg_name <> "" then !pkg_name else Filename.(chop_extension (basename f)) in
     Format.printf "Processing file %s as %s.@." f name;
@@ -158,5 +166,5 @@ let _ =
      | Variable (_, n, v) -> install_section param n v
      | _ -> raise No_install_file
     ) opam_file.file_contents
-  ) !files
+  ) files
 ;;
