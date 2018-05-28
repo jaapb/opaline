@@ -79,6 +79,7 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
 ;;
 
 type param = {
+  name : string;
   libdir : string;
   bindir : string;
   sbindir : string;
@@ -91,11 +92,14 @@ type param = {
   mandir : string;
 }
 
+let get_libdir { name ; libdir } =
+  Filename.concat libdir name
+
 let do_install p ~section ~src ?dst () =
   if section = "lib" then
-    install_file p.libdir src dst
+    install_file (get_libdir p) src dst
   else if section = "libexec" then
-    install_file ~exec:true p.libdir src dst
+    install_file ~exec:true (get_libdir p) src dst
   else if section = "bin" then
     install_file ~exec:true p.bindir src dst
   else if section = "sbin" then
@@ -134,7 +138,8 @@ let get_param prefix name : param =
   if name = "" then raise No_package_name;
   let d x y = if x <> "" then x else filename_concat y in
   {
-    libdir = d !libdir [ prefix ; "lib" ; name ];
+    name ;
+    libdir = d !libdir [ prefix ; "lib" ];
     bindir = d !bindir [ prefix ; "bin" ];
     sbindir = d !sbindir [ prefix ; "sbin" ];
     topleveldir = d !topleveldir [ prefix ; "lib" ; "toplevel" ];
