@@ -137,17 +137,18 @@ let install_section param name files =
 let get_param prefix name : param =
   if name = "" then raise No_package_name;
   let d x y = if x <> "" then x else filename_concat y in
+  let libdir = d !libdir [ prefix ; "lib" ] in
   {
-    name ;
-    libdir = d !libdir [ prefix ; "lib" ];
+    name;
+    libdir;
     bindir = d !bindir [ prefix ; "bin" ];
     sbindir = d !sbindir [ prefix ; "sbin" ];
-    topleveldir = d !topleveldir [ prefix ; "lib" ; "toplevel" ];
+    topleveldir = d !topleveldir [ libdir ; "toplevel" ];
     sharedir = d !sharedir [ prefix ; "share" ; name ];
     share_rootdir = d !share_rootdir [ prefix ; "share" ];
     etcdir = d !etcdir [ prefix ; "etc" ; name ];
     docdir = d !docdir [ prefix ; "doc" ; name ];
-    stublibsdir = d !stublibsdir [ prefix ; "lib" ; "stublibs" ];
+    stublibsdir = d !stublibsdir [ libdir ; "stublibs" ];
     mandir = d !mandir [ prefix ; "man" ];
   }
 
