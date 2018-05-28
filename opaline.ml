@@ -40,15 +40,11 @@ let arg_list =
     "-install-cmd", Arg.String (fun s -> install_cmd := s), "Install command";
     "-exec-install-cmd", Arg.String (fun s -> exec_install_cmd := s), "Install command";
   ]
-;; 
-
-let filename_concat l =
-  let rec fc_aux res = function
-  | [] -> res
-  | h::t -> fc_aux (Filename.concat res h) t
-  in
-    fc_aux "" l
 ;;
+
+
+let filename_concat =
+  List.fold_left Filename.concat ""
 
 let install_file ?(exec=false) ?(man=false) dir src dst =
 	let (src, optional) =
