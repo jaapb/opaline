@@ -40,15 +40,16 @@ let arg_list =
     "-install-cmd", Arg.String (fun s -> install_cmd := s), "Install command";
     "-exec-install-cmd", Arg.String (fun s -> exec_install_cmd := s), "Install command";
   ]
-;; 
-
-let filename_concat l =
-  let rec fc_aux res = function
-  | [] -> res
-  | h::t -> fc_aux (Filename.concat res h) t
-  in
-    fc_aux "" l
 ;;
+
+
+let filename_concat =
+  List.fold_left Filename.concat ""
+
+let check_file_exists ~optional src : bool =
+  match Unix.(access src [R_OK; F_OK]) with
+  | () -> true
+  | exception Unix.Unix_error _ -> if optional then false else raise (File_nonexistent src)
 
 let install_file ?(exec=false) ?(man=false) dir src dst =
 	let (src, optional) =
@@ -67,11 +68,8 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
             filename_concat [!destdir; dir; fname]
     | Some d -> filename_concat [!destdir; dir; d]
   in
+  if check_file_exists ~optional src then begin
   ignore (Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path)));
-	(try
-		Unix.access src [R_OK; F_OK]
-	with
-		Unix.Unix_error _ -> raise (File_nonexistent src));
   let ret = if exec then
    	 Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path)
   else
@@ -80,77 +78,101 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
 		()
 	else
 		raise (Install_error (ret, src))
-;;
+  end
 
-let do_install ~section ~src ?dst () =
+type param = {
+  name : string;
+  libdir : string;
+  bindir : string;
+  sbindir : string;
+  topleveldir : string;
+  sharedir : string;
+  share_rootdir : string;
+  etcdir : string;
+  docdir : string;
+  stublibsdir : string;
+  mandir : string;
+}
+
+let get_libdir { name ; libdir } =
+  Filename.concat libdir name
+
+let do_install p ~section ~src ?dst () =
   if section = "lib" then
-    install_file !libdir src dst
+    install_file (get_libdir p) src dst
   else if section = "libexec" then
-    install_file ~exec:true !libdir src dst
+    install_file ~exec:true (get_libdir p) src dst
   else if section = "bin" then
-    install_file ~exec:true !bindir src dst
+    install_file ~exec:true p.bindir src dst
   else if section = "sbin" then
-    install_file ~exec:true !sbindir src dst
+    install_file ~exec:true p.sbindir src dst
   else if section = "toplevel" then
-    install_file !topleveldir src dst
+    install_file p.topleveldir src dst
   else if section = "share" then
-    install_file !sharedir src dst
+    install_file p.sharedir src dst
   else if section = "share_root" then
-    install_file !share_rootdir src dst
+    install_file p.share_rootdir src dst
   else if section = "etc" then
-    install_file !etcdir src dst
+    install_file p.etcdir src dst
   else if section = "doc" then
-    install_file !docdir src dst
+    install_file p.docdir src dst
   else if section = "stublibs" then
-    install_file ~exec:true !stublibsdir src dst
+    install_file ~exec:true p.stublibsdir src dst
   else if section = "man" then
-    install_file ~man:true !mandir src dst
+    install_file ~man:true p.mandir src dst
   else if section = "misc" then
     install_file "/" src dst 
   else
     raise No_install_file
 ;;
 
-let install_section name files =
+let install_section param name files =
   match files with
   | List (_, l) -> List.iter (function
-    | Option (_, String (_, src), [String (_, dst)]) -> do_install ~section:name ~src ~dst ()
-    | String (_, src) -> do_install ~section:name ~src ()
+    | Option (_, String (_, src), [String (_, dst)]) -> do_install param ~section:name ~src ~dst ()
+    | String (_, src) -> do_install param ~section:name ~src ()
     | _ -> raise No_install_file
     ) l 
   | _ -> raise No_install_file
 ;;
 
+let get_param prefix name : param =
+  if name = "" then raise No_package_name;
+  let d x y = if x <> "" then x else filename_concat y in
+  let libdir = d !libdir [ prefix ; "lib" ] in
+  {
+    name;
+    libdir;
+    bindir = d !bindir [ prefix ; "bin" ];
+    sbindir = d !sbindir [ prefix ; "sbin" ];
+    topleveldir = d !topleveldir [ libdir ; "toplevel" ];
+    sharedir = d !sharedir [ prefix ; "share" ; name ];
+    share_rootdir = d !share_rootdir [ prefix ; "share" ];
+    etcdir = d !etcdir [ prefix ; "etc" ; name ];
+    docdir = d !docdir [ prefix ; "doc" ; name ];
+    stublibsdir = d !stublibsdir [ libdir ; "stublibs" ];
+    mandir = d !mandir [ prefix ; "man" ];
+  }
+
+(* List of *.install files in current directory *)
+let all_install_files () : string list =
+  () |> Sys.getcwd |> Sys.readdir |> Array.to_list |> List.filter
+  (fun n -> Filename.extension n = ".install")
+
 let _ =
   Arg.parse arg_list (fun s -> files := s::!files) "Usage: opaline [arguments] <install-file>";
-  files := List.rev !files;
-  if !pkg_name = "" then
-    raise No_package_name;
-  if !libdir = "" then
-    libdir := filename_concat [!prefix; "lib"; !pkg_name];
-  if !bindir = "" then
-    bindir := Filename.concat !prefix "bin";
-  if !sbindir = "" then
-    sbindir := Filename.concat !prefix "sbin";
-  if !topleveldir = "" then
-    topleveldir := Filename.concat !prefix "lib/toplevel";
-  if !sharedir = "" then
-    sharedir := filename_concat [!prefix; "share"; !pkg_name];
-  if !share_rootdir = "" then
-    share_rootdir := Filename.concat !prefix "share";
-  if !etcdir = "" then
-    etcdir := filename_concat [!prefix; "etc"; !pkg_name];
-  if !docdir = "" then
-    docdir := filename_concat [!prefix; "doc"; !pkg_name];
-  if !stublibsdir = "" then
-    stublibsdir := Filename.concat !prefix "lib/stublibs";
-  if !mandir = "" then
-    mandir := Filename.concat !prefix "man";
+  let files =
+    if !files <> [] then List.rev !files
+    else all_install_files ()
+  in
   List.iter (fun f ->
+    let name = if !pkg_name <> "" then !pkg_name else Filename.(chop_extension (basename f)) in
+    Format.printf "Processing file %s as %s.@." f name;
+    let param = get_param !prefix name in
     let opam_file = OpamParser.file f in
     List.iter (function
-     | Variable (_, n, v) -> install_section n v
+     | Variable (_, n, v) -> install_section param n v
      | _ -> raise No_install_file
     ) opam_file.file_contents
-  ) !files
+  ) files
 ;;
