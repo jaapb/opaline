@@ -22,6 +22,8 @@ let mandir = ref "";;
 let install_cmd = ref "install -m 0644";;
 let exec_install_cmd = ref "install -m 0755";;
 
+let verbose = ref false;;
+
 let arg_list =
   [
     "-name", Arg.String (fun s -> pkg_name := s), "Package name";
@@ -39,6 +41,7 @@ let arg_list =
     "-mandir", Arg.String (fun s -> mandir := s), "Directory to install files from the man section";
     "-install-cmd", Arg.String (fun s -> install_cmd := s), "Install command";
     "-exec-install-cmd", Arg.String (fun s -> exec_install_cmd := s), "Install command";
+		"-verbose", Arg.Unit (fun () -> verbose := true), "Be verbose (default off)" 
   ]
 ;;
 
@@ -69,6 +72,7 @@ let install_file ?(exec=false) ?(man=false) dir src dst =
     | Some d -> filename_concat [!destdir; dir; d]
   in
   if check_file_exists ~optional src then begin
+	if !verbose then Format.printf "- installing from %s to %s@." src path;
   ignore (Sys.command (Printf.sprintf "mkdir -p %s" (Filename.dirname path)));
   let ret = if exec then
    	 Sys.command (Printf.sprintf "%s %s %s" !exec_install_cmd src path)
@@ -127,6 +131,7 @@ let do_install p ~section ~src ?dst () =
 ;;
 
 let install_section param name files =
+	if !verbose then Format.printf "Installing section %s.@." name;
   match files with
   | List (_, l) -> List.iter (function
     | Option (_, String (_, src), [String (_, dst)]) -> do_install param ~section:name ~src ~dst ()
@@ -167,7 +172,7 @@ let _ =
   in
   List.iter (fun f ->
     let name = if !pkg_name <> "" then !pkg_name else Filename.(chop_extension (basename f)) in
-    Format.printf "Processing file %s as %s.@." f name;
+    if !verbose then Format.printf "Processing file %s as %s.@." f name;
     let param = get_param !prefix name in
     let opam_file = OpamParser.file f in
     List.iter (function
