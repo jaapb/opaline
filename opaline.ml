@@ -1,4 +1,4 @@
-open OpamParserTypes
+open OpamParserTypes.FullPos
 
 exception No_install_file
 exception No_package_name
@@ -133,11 +133,11 @@ let do_install p ~section ~src ?dst () =
 let install_section param name files =
 	if !verbose then Format.printf "Installing section %s.@." name;
   match files with
-  | List (_, l) -> List.iter (function
-    | Option (_, String (_, src), [String (_, dst)]) -> do_install param ~section:name ~src ~dst ()
-    | String (_, src) -> do_install param ~section:name ~src ()
+  | List { pelem = l; _ } -> List.iter (fun x -> match x.pelem with
+    | Option ({ pelem = String src; _ }, { pelem = [{ pelem = String dst; _ }]; }) -> do_install param ~section:name ~src ~dst ()
+    | String src -> do_install param ~section:name ~src ()
     | _ -> raise No_install_file
-    ) l 
+    ) l
   | _ -> raise No_install_file
 ;;
 
@@ -174,9 +174,9 @@ let _ =
     let name = if !pkg_name <> "" then !pkg_name else Filename.(chop_extension (basename f)) in
     if !verbose then Format.printf "Processing file %s as %s.@." f name;
     let param = get_param !prefix name in
-    let opam_file = OpamParser.file f in
-    List.iter (function
-     | Variable (_, n, v) -> install_section param n v
+    let opam_file = OpamParser.FullPos.file f in
+    List.iter (fun x -> match x.pelem with
+     | Variable (n, v) -> install_section param n.pelem v.pelem
      | _ -> raise No_install_file
     ) opam_file.file_contents
   ) files
